@@ -1,0 +1,75 @@
+ChatGPT
+You said:
+I have a df with columns factor, p90, p95, p99, p100, jump_90_95, jump_95_99, jump_99_100.
+Now I want to output it as an excel, but in the excel, there is a column named factor, and now each factor will have two rows (so in a way, two rows are merged for factor column) and then a column named metric with the two row values as factor_value and jump. Then third column is p95 and its factor_value is same as p95 col value but its jump value will be value in jump_p90_p95. Similarly p99 and p100 columns will be there... Then the rest of the columns as it is for the factor, but they will be merged of two rows as well, just like factor column
+ChatGPT said:
+Here's how you can transform and export your DataFrame to Excel in the structure you described:
+
+📌 Example Input df:
+factor	p90	p95	p99	p100	jump_90_95	jump_95_99	jump_99_100
+A	10	15	20	25	5	5	5
+B	30	35	40	45	5	5	5
+📌 Desired Excel Output (logical format):
+factor	metric	p95	p99	p100	(any other columns…)
+A	factor_value	15	20	25	...
+jump	5	5	5	...
+B	factor_value	35	40	45	...
+jump	5	5	5	...
+✅ Code to Achieve This in Python:
+import pandas as pd
+
+# Sample data
+df = pd.DataFrame({
+    'factor': ['A', 'B'],
+    'p90': [10, 30],
+    'p95': [15, 35],
+    'p99': [20, 40],
+    'p100': [25, 45],
+    'jump_90_95': [5, 5],
+    'jump_95_99': [5, 5],
+    'jump_99_100': [5, 5],
+    # You can add more columns here
+})
+
+# Build new DataFrame
+rows = []
+for _, row in df.iterrows():
+    base = {
+        'factor': row['factor'],
+        'metric': 'factor_value',
+        'p95': row['p95'],
+        'p99': row['p99'],
+        'p100': row['p100'],
+        # Include other columns if needed
+    }
+    jump = {
+        'factor': '',  # Empty so Excel merges visually
+        'metric': 'jump',
+        'p95': row['jump_90_95'],
+        'p99': row['jump_95_99'],
+        'p100': row['jump_99_100'],
+        # Include other columns with empty or appropriate values
+    }
+    rows.extend([base, jump])
+
+output_df = pd.DataFrame(rows)
+
+# Export to Excel with merge style
+with pd.ExcelWriter('formatted_output.xlsx', engine='xlsxwriter') as writer:
+    output_df.to_excel(writer, index=False, sheet_name='Sheet1', startrow=1)
+
+    workbook  = writer.book
+    worksheet = writer.sheets['Sheet1']
+
+    # Write header manually to allow merging below
+    header = list(output_df.columns)
+    for col_num, col_name in enumerate(header):
+        worksheet.write(0, col_num, col_name)
+
+    # Merge 'factor' column rows in pairs
+    for row in range(1, len(output_df)+1, 2):
+        factor_val = output_df.iloc[row-1]['factor']
+        if factor_val != '':
+            worksheet.merge_range(row, 0, row+1, 0, factor_val)
+
+    # Optional: apply formatting or merge other columns similarl
